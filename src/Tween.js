@@ -257,7 +257,7 @@ TWEEN.Tween = function ( object ) {
 
 			if ( _chainedTween !== null ) {
 
-				_chainedTween.start();
+				_chainedTween.start(_startTime + _duration);
 
 			}
 
