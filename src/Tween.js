@@ -137,24 +137,36 @@ TWEEN.Tween = function ( object ) {
 
 		}
 
-		for ( var property in properties ) {
-
-			// This prevents the engine from interpolating null values
-			if ( _object[ property ] === null ) {
-
-				continue;
-
-			}
-
-			// The current values are read when the tween starts;
-			// here we only store the final desired values
-			_valuesEnd[ property ] = properties[ property ];
-
-		}
+        this.initEnds(properties, _object, _valuesEnd);
 
 		return this;
 
 	};
+
+    this.initEnds = function(properties, object, end) {
+        for (var property in properties) {
+            // This prevents the engine from interpolating null values
+            if (object[property] === null) {
+                continue;
+            }
+
+            if (typeof properties[property] == 'object') {
+                if (typeof object[property] != 'object') {
+                    continue;
+                }
+
+                end[property] = {};
+                this.initEnds(properties[property],
+                              object[property],
+                              end[property]);
+            }
+            else {
+                // The current values are read when the tween starts;
+                // here we only store the final desired values
+                end[property] = properties[property];
+            }
+        }
+    };
 
 	this.start = function (_time) {
 
@@ -162,22 +174,37 @@ TWEEN.Tween = function ( object ) {
 
 		_startTime = _time ? _time + _delayTime : Date.now() + _delayTime;
 
-		for ( var property in _valuesEnd ) {
-
-			// Again, prevent dealing with null values
-			if ( _object[ property ] === null ) {
-
-				continue;
-
-			}
-
-			_valuesStart[ property ] = _object[ property ];
-			_valuesDelta[ property ] = _valuesEnd[ property ] - _object[ property ];
-
-		}
+        this.initDeltas(_valuesEnd, _object, _valuesStart, _valuesDelta);
 
 		return this;
 	};
+
+    this.initDeltas = function(end, object, start, delta) {
+        for (var property in end) {
+            // Again, prevent dealing with null values
+            if (object[property] === null) {
+                continue;
+            }
+
+            if (typeof end[property] == 'object') {
+                if (typeof object[property] != 'object') {
+                    continue;
+                }
+
+                start[property] = {};
+                delta[property] = {};
+                this.initDeltas(end[property],
+                                object[property],
+                                start[property],
+                                delta[property]);
+            }
+            else { 
+                start[property] = object[property];
+                delta[property] = end[property] - object[property];
+            }
+        }
+    };
+
 
 	this.stop = function () {
 
@@ -235,11 +262,7 @@ TWEEN.Tween = function ( object ) {
 
 		value = _easingFunction( elapsed );
 
-		for ( property in _valuesDelta ) {
-
-			_object[ property ] = _valuesStart[ property ] + _valuesDelta[ property ] * value;
-
-		}
+        this.updateValues(_valuesDelta, _object, _valuesStart, value);
 
 		if ( _onUpdateCallback !== null ) {
 
@@ -268,6 +291,20 @@ TWEEN.Tween = function ( object ) {
 		return true;
 
 	};
+
+    this.updateValues = function(delta, object, start, value) {
+        for (var property in delta) {
+            if (typeof delta[property] == 'object') {
+                this.updateValues(delta[property],
+                                  object[property],
+                                  start[property],
+                                  value);
+            }
+            else {
+                object[property] = start[property] + delta[property] * value;
+            }
+        }
+    };
 
 	/*
 	this.destroy = function () {
